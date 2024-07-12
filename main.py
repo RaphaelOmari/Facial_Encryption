@@ -1,6 +1,7 @@
 import threading
 import cv2
 from deepface import DeepFace
+from cryptography.fernet import Fernet
 
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -12,6 +13,26 @@ reference_img = cv2.imread("reference.jpg")
 face_match = False
 lock = threading.Lock()
 
+# Function to generate a key and save it to a file
+def generate_key():
+    key = Fernet.generate_key()
+    with open("secret.key", "wb") as key_file:
+        key_file.write(key)
+    return key
+
+# Function to load the key from a file
+def load_key():
+    return open("secret.key", "rb").read()
+
+# Function to encrypt a file
+def encrypt_file(file_name, key):
+    fernet = Fernet(key)
+    with open(file_name, "rb") as file:
+        file_data = file.read()
+    encrypted_data = fernet.encrypt(file_data)
+    with open(file_name + ".enc", "wb") as file:
+        file.write(encrypted_data)
+
 def check_face(frame):
     global face_match
     try:
@@ -22,6 +43,12 @@ def check_face(frame):
         with lock:
             face_match = False
         print(e)
+
+# Generate and save a key if not already done
+try:
+    key = load_key()
+except FileNotFoundError:
+    key = generate_key()
 
 while True:
     ret, frame = cap.read()
@@ -49,3 +76,6 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
+# Example usage: encrypt a file named "example.txt"
+encrypt_file("example.txt", key)
